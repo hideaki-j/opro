@@ -1,5 +1,3 @@
-# Cloned repo
-
 # Large Language Models as Optimizers
 
 This repository contains the code for the paper
