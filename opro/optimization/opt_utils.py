@@ -174,7 +174,7 @@ def gen_meta_prompt(
             " The score ranges from 0 to 100.\n"
         )
     else:
-      assert optimizer_llm_name.lower() == "text-bison"
+      assert optimizer_llm_name.lower() in {"text-bison", "sglang"}
       meta_prompt_old_instruction_part = (
           "I have some texts along with their corresponding scores."
           " The texts are arranged in ascending order based on their scores,"
@@ -195,7 +195,7 @@ def gen_meta_prompt(
       if optimizer_llm_name.lower() in {"gpt-3.5-turbo", "gpt-4"}:
         meta_prompt_exemplar_part += "Below are some problems.\n"
       else:
-        assert optimizer_llm_name.lower() == "text-bison"
+        assert optimizer_llm_name.lower() in {"text-bison", "sglang"}
         meta_prompt_exemplar_part += (
             "The following exemplars show how to apply your text: you replace"
             " <INS> in each input with your text, then read the input and give"
@@ -228,7 +228,7 @@ def gen_meta_prompt(
             if optimizer_llm_name.lower() in {"gpt-3.5-turbo", "gpt-4"}:
               meta_prompt_exemplar_part += f"\nQ: {question}\nA: <Start>"
             else:
-              assert optimizer_llm_name.lower() == "text-bison"
+              assert optimizer_llm_name.lower() in {"text-bison", "sglang"}
               meta_prompt_exemplar_part += f"\ninput:\nQ: {question}\nA: <INS>"
         else:  # when there're no "Q:" and "A:" in the prompt
           assert instruction_pos in {"Q_begin", "Q_end"}
@@ -238,7 +238,7 @@ def gen_meta_prompt(
             elif instruction_pos == "Q_end":
               meta_prompt_exemplar_part += f"\nProblem:\n{question}\n<INS>\n"
           else:
-            assert optimizer_llm_name.lower() == "text-bison"
+            assert optimizer_llm_name.lower() in {"text-bison", "sglang"}
             if instruction_pos == "Q_begin":
               meta_prompt_exemplar_part += f"\ninput:\n<INS>\n{question}\n"
             elif instruction_pos == "Q_end":
@@ -249,7 +249,7 @@ def gen_meta_prompt(
               f"\nGround truth answer:\n{true_answer}\n"
           )
         else:
-          assert optimizer_llm_name.lower() == "text-bison"
+          assert optimizer_llm_name.lower() in {"text-bison", "sglang"}
           meta_prompt_exemplar_part += f"\noutput:\n{true_answer}\n"
 
     if few_shot_qa_pairs:
@@ -288,7 +288,7 @@ def gen_meta_prompt(
             " and generally applicable to all problems above."
         )
     else:
-      assert optimizer_llm_name.lower() == "text-bison"
+      assert optimizer_llm_name.lower() in {"text-bison", "sglang"}
       meta_prompt += (
           "\n\nWrite your new text that is different from the old ones and"
           " has a score as high as possible. Write the text in square brackets."
@@ -761,7 +761,7 @@ def run_evolution(**kwargs):
             new_inst = raw_output[start_index:end_index].strip()
             generated_instructions_raw.append(new_inst)
         else:
-          assert optimizer_llm_name.lower() == "text-bison"
+          assert optimizer_llm_name.lower() in {"text-bison", "sglang"}
           generated_instructions_raw += [
               extract_string_in_square_brackets(string)
               for string in raw_outputs

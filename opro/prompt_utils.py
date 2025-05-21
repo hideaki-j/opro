@@ -84,21 +84,33 @@ def call_openai_server_single_prompt(
     )
 
 
+from sglang_local.llm import batch_complete
+from sglang_local.sglang_wrappers import SGLangWrapper
+
 def call_openai_server_func(
-    inputs, model="gpt-3.5-turbo", max_decode_steps=20, temperature=0.8
-):
-  """The function to call OpenAI server with a list of input strings."""
-  if isinstance(inputs, str):
-    inputs = [inputs]
-  outputs = []
-  for input_str in inputs:
-    output = call_openai_server_single_prompt(
-        input_str,
-        model=model,
-        max_decode_steps=max_decode_steps,
-        temperature=temperature,
+    inputs: list[str] | str,
+    model: str = "gpt-3.5-turbo",
+    max_decode_steps: int = 20,
+    temperature: float = 0.8,
+) -> list[str]:
+  """
+  Batched LLM interface. If model=="sglang", uses SGLangWrapper. Otherwise falls back to per-prompt OpenAI calls.
+  """
+  # normalize to list
+  prompts = [inputs] if isinstance(inputs, str) else inputs
+
+  if model == "sglang":
+    # Use batch_complete for sglang
+    return batch_complete(prompts, verbose=True, model=model, max_tokens=max_decode_steps, temperature=temperature)
+
+  # fallback: one-by-one via OpenAI
+  outputs: list[str] = []
+  for p in prompts:
+    outputs.append(
+      call_openai_server_single_prompt(
+        p, model=model, max_decode_steps=max_decode_steps, temperature=temperature
+      )
     )
-    outputs.append(output)
   return outputs
 
 
@@ -107,7 +119,7 @@ def call_palm_server_from_cloud(
 ):
   """Calling the text-bison model from Cloud API."""
   assert isinstance(input_text, str)
-  assert model == "text-bison-001"
+  assert model == "text-bison-001" or model == "sglang_dummy"
   all_model_names = [
       m
       for m in palm.list_models()

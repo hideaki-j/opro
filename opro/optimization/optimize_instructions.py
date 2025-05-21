@@ -160,11 +160,13 @@ def main(_):
       "text-bison",
       "gpt-3.5-turbo",
       "gpt-4",
+      "sglang",
   }
   assert optimizer_llm_name in {
       "text-bison",
       "gpt-3.5-turbo",
       "gpt-4",
+      "sglang",
   }
   assert meta_prompt_type in {
       "both_instructions_and_exemplars",
@@ -191,6 +193,9 @@ def main(_):
   if scorer_llm_name in {"gpt-3.5-turbo", "gpt-4"}:
     assert openai_api_key, "The OpenAI API key must be provided."
     openai.api_key = openai_api_key
+  elif scorer_llm_name in {"sglang"}:
+    # No API key needed for sglang
+    pass
   else:
     assert scorer_llm_name == "text-bison"
     assert (
@@ -201,6 +206,9 @@ def main(_):
   if optimizer_llm_name in {"gpt-3.5-turbo", "gpt-4"}:
     assert openai_api_key, "The OpenAI API key must be provided."
     openai.api_key = openai_api_key
+  elif optimizer_llm_name in {"sglang"}:
+    # No API key needed for sglang
+    pass
   else:
     assert optimizer_llm_name == "text-bison"
     assert (
@@ -275,7 +283,7 @@ def main(_):
     call_scorer_server_func = call_scorer_finetuned_palm_server_func
 
   else:
-    assert scorer_llm_name.lower() in {"gpt-3.5-turbo", "gpt-4"}
+    assert scorer_llm_name.lower() in {"gpt-3.5-turbo", "gpt-4", "sglang_dummy", "sglang"}
     scorer_gpt_max_decode_steps = 1024
     scorer_gpt_temperature = 0.0
 
@@ -283,7 +291,13 @@ def main(_):
     scorer_gpt_dict["max_decode_steps"] = scorer_gpt_max_decode_steps
     scorer_gpt_dict["temperature"] = scorer_gpt_temperature
     scorer_gpt_dict["num_decodes"] = 1
-    scorer_gpt_dict["batch_size"] = 1
+    if scorer_llm_name.lower() in {"sglang_dummy", "sglang"}:
+      # For sglang models, allow batching all examples during evaluation
+      # by setting a very large batch size. The actual batching will be
+      # handled by SGLangWrapper.
+      scorer_gpt_dict["batch_size"] = sys.maxsize
+    else:
+      scorer_gpt_dict["batch_size"] = 1
     scorer_gpt_dict["num_servers"] = 1
 
     scorer_llm_dict = {
@@ -336,13 +350,17 @@ def main(_):
     call_optimizer_server_func = call_optimizer_finetuned_palm_server_func
 
   else:
-    assert optimizer_llm_name in {"gpt-3.5-turbo", "gpt-4"}
+    assert optimizer_llm_name in {"gpt-3.5-turbo", "gpt-4", "sglang_dummy", "sglang"}
     optimizer_gpt_max_decode_steps = 512
     optimizer_gpt_temperature = 1.0
 
     optimizer_llm_dict = dict()
     optimizer_llm_dict["max_decode_steps"] = optimizer_gpt_max_decode_steps
     optimizer_llm_dict["temperature"] = optimizer_gpt_temperature
+    # For optimizer, batch_size=1 and num_decodes=1 is standard for sglang,
+    # as it typically generates one refined instruction from one meta-prompt.
+    # If multiple diverse generations from a single meta-prompt are needed,
+    # num_decodes would be higher, but sglang_wrapper currently takes one prompt list.
     optimizer_llm_dict["batch_size"] = 1
     optimizer_llm_dict["num_decodes"] = 1
     call_optimizer_server_func = functools.partial(
@@ -683,7 +701,7 @@ def main(_):
     old_instruction_score_threshold = 0.0
     # old_instruction_score_threshold = 0.15  # for GSM8K
   else:
-    assert scorer_llm_name in {"gpt-3.5-turbo", "gpt-4"}
+    assert scorer_llm_name in {"gpt-3.5-turbo", "gpt-4", "sglang_dummy", "sglang"}
     old_instruction_score_threshold = 0.3
 
   if scorer_llm_name == "text-bison":
@@ -691,7 +709,7 @@ def main(_):
     include_qa = False
     evaluate_in_parallel = False
   else:
-    assert scorer_llm_name in {"gpt-3.5-turbo", "gpt-4"}
+    assert scorer_llm_name in {"gpt-3.5-turbo", "gpt-4", "sglang_dummy", "sglang"}
     extract_final_answer_by_prompting_again = False
     include_qa = False
     evaluate_in_parallel = False
@@ -705,7 +723,7 @@ def main(_):
   # decodes in model parameters, because those values are limited by model
   # serving configs.
   num_generated_instructions_in_each_step = 8
-  num_search_steps = 200
+  num_search_steps = 5 # 200
 
   initial_instructions = [
       "Let's solve the problem.",

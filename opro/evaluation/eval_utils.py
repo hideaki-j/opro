@@ -703,9 +703,15 @@ def evaluate_single_instruction(
         call_server_local_func=call_server_func,
     )
   else:  # no parallelism in first round
-    raw_answers = [
-        call_server_func(prompt)[0] for prompt in raw_prompts_flattened
-    ]
+    raw_answers = []
+    num_prompts = len(raw_prompts_flattened)
+    if num_prompts > 0:
+        for i in range(0, num_prompts, batch_size):
+            current_batch_prompts = raw_prompts_flattened[i:min(i + batch_size, num_prompts)]
+            # call_server_func is expected to take a list of prompts 
+            # and return a list of responses (one response per prompt for num_decodes=1)
+            batch_responses = call_server_func(current_batch_prompts)
+            raw_answers.extend(batch_responses)
 
   if verbose:
     print("first round of prompting finished")
