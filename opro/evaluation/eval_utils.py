@@ -554,8 +554,9 @@ def evaluate_single_instruction(
     prediction_num_decimals=0,
     is_gpt_model=False,
     verbose=False,
+    return_accuracy_only=False,
 ):
-  r"""Evaluate a single instruction on the given indices of the given data.
+  """Evaluate a single instruction on the given indices of the given data.
 
   Args:
     data (list): the input-output pairs.
@@ -594,11 +595,13 @@ def evaluate_single_instruction(
     is_gpt_model (bool): Whether the scorer model is a GPT model. This flag
       exists because GPT models often output the final answer in "\boxed{}".
     verbose (bool): whether to print out progress information.
+    return_accuracy_only (bool): If True, only return the average accuracy as a float.
+      If False (default), return the detailed results dataframe.
 
   Returns:
-    detailed_results_df (pandas.DataFrame): the prompts, results, true answers
-    and accuracies. Columns are ['raw_prompt', 'raw_answer', 'parsed_answer',
-    'true_answer', 'accuracy'].
+    detailed_results_df (pandas.DataFrame) or float: If return_accuracy_only is False,
+    the function returns a pandas DataFrame with detailed results. If return_accuracy_only
+    is True, it returns the average accuracy as a float.
   """
   assert prediction_treat_as_number == "adaptive" or isinstance(
       prediction_treat_as_number, bool
@@ -866,6 +869,13 @@ def evaluate_single_instruction(
     )
 
   detailed_results_df.set_index("index_in_raw_dataset", inplace=True)
+  
+  if return_accuracy_only:
+    # Return the average accuracy instead of the full DataFrame
+    scores = detailed_results_df["accuracy"]
+    average_accuracy = np.average(scores)
+    return average_accuracy
+  
   return detailed_results_df
 
 

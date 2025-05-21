@@ -27,6 +27,7 @@ sys.path.insert(0, OPRO_ROOT_PATH)
 
 import numpy as np
 from opro.evaluation import eval_utils
+from opro.evaluation import train_accuracy_calc
 import pandas as pd
 
 
@@ -520,7 +521,8 @@ def run_evolution(**kwargs):
   for instruction in initial_instructions:
     print(f"""computing the score of "{instruction}" by prompting""")
 
-    detailed_results_df = eval_utils.evaluate_single_instruction(
+    # Get both the accuracy and detailed results
+    average_score, detailed_results_df = train_accuracy_calc.calculate_instruction_accuracy(
         data=raw_data,
         instruction=instruction,
         eval_index_all=train_index,
@@ -542,8 +544,6 @@ def run_evolution(**kwargs):
     )
 
     detailed_results_df_by_instruction_dict[instruction] = detailed_results_df
-    scores = detailed_results_df["accuracy"]
-    average_score = np.average(scores)
     print(f"instruction: {instruction}, score: {average_score}")
     filename = eval_utils.instruction_to_filename(instruction)
     file_path = os.path.join(result_by_instruction_folder, f"{filename}.csv")
